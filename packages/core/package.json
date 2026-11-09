@@ -1,0 +1,21 @@
+{
+  "name": "@skrypt/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless core: parser Markdown → ScriptDocument (bez DOM i bez Lit).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "github-slugger": "^2.0.0",
+    "marked": "^18.1.3",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}

@@ -183,7 +183,7 @@ Konwencja trafi do krótkiego poradnika dla nauczycieli (`docs/poradnik-autora.m
 ### 4.2 Pułapki potwierdzone testem na `marked@18`
 
 1. **Front matter nie jest obsługiwany przez marked.** `---\ntitle: Test\n---` daje token `hr` oraz nagłówek H2 „title: Test”, czyli mapper utworzyłby fałszywy rozdział. Front matter trzeba wyciąć przed lexerem (krok 1).
-2. **`---` bezpośrednio pod linią tekstu to nagłówek H2 (setext), a nie separator.** `Tekst\n---` daje `heading depth:2`, czyli nowy rozdział zamiast nowej sekcji. Dlatego konwencja to `***`. Walidator ostrzega o nagłówkach setext (token ma `raw` bez `#`) i o `---` w treści.
+2. **`---` bezpośrednio pod linią tekstu to nagłówek H2 (setext), a nie separator.** `Tekst\n---` daje `heading depth:2`, czyli nowy rozdział zamiast nowej sekcji. Dlatego konwencja to `***`. Walidator ostrzega o nagłówkach setext (token ma `raw` bez `#`) i o `---` w treści. Pojedyncze `---` otoczone pustymi liniami parser mimo to traktuje jak separator sekcji (z ostrzeżeniem), żeby nie gubić intencji autora.
 3. **Surowy HTML przechodzi bez zmian.** `<script>alert(1)</script>` w .md trafia do wyniku dosłownie (opcję `sanitize` usunięto z marked).
 
 ### 4.3 Identyfikatory
@@ -192,6 +192,8 @@ ID z indeksów zmieniają się po każdej edycji skryptu. Wstawienie jednej sekc
 
 - rozdział / sekcja: jawne `{#id}` → w przeciwnym razie slug z tytułu (`github-slugger`, obsługuje polskie znaki) → dla sekcji bez tytułu `${chapterId}-s${n}`;
 - duplikaty dostają sufiks `-2`, `-3` i ostrzeżenie w walidatorze;
+- unikalność dotyczy rodzaju elementu (osobne pule: rozdziały, sekcje, bloki). Powód: rozdział „Pętle” i jego sekcja „Pętle” to częsty, w pełni poprawny układ. W atrybutach `id` elementów DOM UI dodaje prefiksy (`ch-`, `sec-`);
+- slug zachowuje polskie znaki (`pętla-for`), bo `github-slugger` nie transliteruje;
 - quiz: wymagane jawne `id` (bo wiąże się z zapisanymi odpowiedziami); brak ID = ostrzeżenie + ID wyliczone;
 - zwykłe bloki: indeks w sekcji (nie trzeba ich trwale przechowywać);
 - `docVersion` = hash treści; w sesji wspólnej klient z inną wersją dostaje ostrzeżenie.
@@ -304,12 +306,12 @@ Każdy krok kończy się działającą wersją w `apps/playground`, którą moż
 
 ### Faza A: czytanie (pierwsza użyteczna wersja)
 
-**Krok 1. Fundament**
+**Krok 1. Fundament** ✅
 - pnpm workspaces, TypeScript `strict`, Vite (library mode), Vitest, ESLint + Prettier, GitHub Actions (lint, typecheck, testy).
 - Fixture'y `.md`: realny skrypt (kod, tabele, wzory, diagram) i przypadki brzegowe.
 - *Gotowe gdy:* CI zielone, `pnpm dev` uruchamia pusty playground.
 
-**Krok 2. Parser struktury (`core`)**
+**Krok 2. Parser struktury (`core`)** ✅
 - Model `ScriptDocument`, `Chapter`, `Section`, `ContentBlock`, `Diagnostic`; `parseScript(markdown)`.
 - Front matter, grupowanie H2/H3/`***`, ID, spis treści, walidator.
 - Testy przypadków brzegowych: brak H1, treść przed H2, H3 przed H2, front matter, setext, `---` w treści, puste sekcje, duplikaty nagłówków, polskie znaki w slugach.
