@@ -1,0 +1,1 @@
+# skrypt-do-zajec
