@@ -14,6 +14,11 @@ export const themeVariables = css`
     --_accent: var(--skrypt-accent, #1d5fd1);
     --_border: var(--skrypt-border, #dde1e8);
     --_surface: var(--skrypt-surface, #f5f7fa);
+    /* Tło strony w trybie po sekcjach; na nim aktywna sekcja wyróżnia się jako biała karta. */
+    --_stage: var(--skrypt-stage, #f4f6f9);
+    /* Wysunięcie aktywnej sekcji poza kolumnę tekstu i jej powiększenie. */
+    --_bleed: var(--skrypt-section-bleed, 0.75rem);
+    --_active-scale: var(--skrypt-active-scale, 1.02);
     --_code-bg: var(--skrypt-code-bg, #f1f3f7);
     --_font: var(
       --skrypt-font-family,

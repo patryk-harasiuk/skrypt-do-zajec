@@ -56,22 +56,46 @@ export class SkryptSection extends LitElement {
       :host(:not(:first-of-type)) {
         border-top: 1px dashed var(--_border);
       }
-      /* Tryb po sekcjach: znacznik na marginesie i przygaszenie sekcji nieaktywnych.
-         Przygaszamy kolorem (muted ma kontrast > 4.5:1), a nie przezroczystością. */
+      /* Tryb po sekcjach: aktywna sekcja wysuwa się na pierwszy plan jako uniesiona karta
+         (cień, tło, lekkie powiększenie), a pozostałe cofają się, bo są przygaszone.
+         Przygaszamy kolorem (muted ma kontrast > 4.5:1), a nie przezroczystością.
+         Powiększenie to transform od górnej krawędzi: nie zmienia układu strony, więc
+         początek sekcji zostaje na swoim miejscu i nic nie skacze. */
       :host([mode='sections']) {
-        padding-left: 1rem;
+        position: relative;
+        margin-block: 0.5rem;
+        /* Karta wystaje poza kolumnę tekstu, tekst pozostaje wyrównany z resztą strony. */
+        margin-left: calc(-1 * (var(--_bleed) + 3px));
+        margin-right: calc(-1 * var(--_bleed));
+        padding-inline: var(--_bleed);
         border-left: 3px solid transparent;
+        border-top-color: transparent;
+        border-radius: 12px;
+        transform-origin: 50% 0;
       }
       :host([mode='sections'][active]) {
+        z-index: 1;
         border-left-color: var(--_accent);
+        background: var(--_bg);
+        box-shadow:
+          0 1px 3px rgb(0 0 0 / 0.08),
+          0 10px 28px rgb(0 0 0 / 0.12);
+        transform: scale(var(--_active-scale));
       }
       :host([mode='sections']:not([active])) {
         --_section-fg: var(--_muted);
         cursor: pointer;
       }
+      :host([mode='sections']:not([active]):hover) {
+        background: rgb(255 255 255 / 0.6);
+      }
       @media (prefers-reduced-motion: no-preference) {
         :host([mode='sections']) {
-          transition: border-color 0.15s;
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease,
+            background-color 0.2s ease,
+            border-color 0.15s;
         }
       }
       .title {

@@ -82,7 +82,7 @@ Treść i układ są w obu trybach takie same. Różni je tylko sposób wyróżn
 | | Czytanie ciągłe | Czytanie po sekcjach (domyślne) |
 |---|---|---|
 | Treść | cały rozdział w jednej kolumnie | to samo |
-| Aktywna sekcja | wyróżniona tylko w spisie treści | wyróżniona w treści: pełny kontrast i znacznik na marginesie, pozostałe sekcje przygaszone |
+| Aktywna sekcja | wyróżniona tylko w spisie treści | na pierwszym planie: biała uniesiona karta (cień, znacznik na marginesie) z lekkim powiększeniem 2% od górnej krawędzi, na tle strony lekko przyciemnionym. Pozostałe sekcje przygaszone. Powiększenie to `transform`, więc nie zmienia układu i nie powoduje skoków. Parametry: `--skrypt-active-scale`, `--skrypt-section-bleed`, `--skrypt-stage` |
 | Strzałki ← → | przechodzą między sekcjami | to samo |
 | Pasek u dołu | brak | tytuł sekcji, „sekcja 4 z 9 w rozdziale”, cienki pasek postępu, przyciski ‹ › |
 | Włączenie | przełącznik „Czytanie po sekcjach” nad spisem treści (`aria-pressed`) albo właściwość `mode` ustawiona przez hosta | |

@@ -209,6 +209,9 @@ export class SkryptReader extends LitElement {
       main:focus {
         outline: none;
       }
+      :host([mode='sections']) main {
+        background: var(--_stage);
+      }
       .page {
         max-width: var(--_measure);
         margin-inline: auto;
