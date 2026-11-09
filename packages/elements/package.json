@@ -1,0 +1,27 @@
+{
+  "name": "@skrypt/elements",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Komponenty Web Components (Lit) czytnika skryptów.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "sideEffects": [
+    "./src/index.ts",
+    "./src/define.ts"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@skrypt/core": "workspace:*",
+    "dompurify": "^3.4.17",
+    "lit": "^3.3.3",
+    "marked": "^18.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "jsdom": "^31.0.0"
+  }
+}

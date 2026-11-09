@@ -236,6 +236,8 @@ W `core` wzory i diagramy to zwykłe bloki (`math`, `mermaid`) ze źródłem tek
 
 ### 6.1 Rejestr dwustronny
 
+Stan po kroku 3: po stronie UI rejestr mapuje typ bloku na funkcję zwracającą szablon Lit (`registerBlockView('quiz', (block, ctx) => html\`...\`)`), a nie na nazwę tagu. Daje to to samo co `BlockView` poniżej, bez dynamicznych szablonów statycznych.
+
 Plugin bloku rejestruje dwie rzeczy, każdą w swoim pakiecie:
 
 ```ts
@@ -317,7 +319,7 @@ Każdy krok kończy się działającą wersją w `apps/playground`, którą moż
 - Testy przypadków brzegowych: brak H1, treść przed H2, H3 przed H2, front matter, setext, `---` w treści, puste sekcje, duplikaty nagłówków, polskie znaki w slugach.
 - *Gotowe gdy:* fixture'y dają oczekiwane drzewo i spis treści, `core` nie importuje `lit` ani API DOM.
 
-**Krok 3. Czytnik ze spisem treści (`elements`)**
+**Krok 3. Czytnik ze spisem treści (`elements`)** ✅
 - Moduł render (marked parser + DOMPurify), store nawigacji, adapter `ReactiveController`.
 - `<skrypt-reader>` przyjmuje `markdown` od hosta, wyświetla spis treści na początku i jako panel; rozdział jako przewijana strona; przejście do sekcji ze spisu; linki kotwicowe.
 - Typografia i układ na telefon i desktop, teksty UI z `strings.pl.ts`.
