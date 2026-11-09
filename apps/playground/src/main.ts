@@ -1,12 +1,10 @@
-import { parseScript } from '@skrypt/core';
+import '@skrypt/elements';
+import type { SkryptReader } from '@skrypt/elements';
 import pythonPodstawy from '../../../fixtures/python-podstawy.md?raw';
 import bledyAutora from '../../../fixtures/bledy-autora.md?raw';
 import xss from '../../../fixtures/xss.md?raw';
 
-/**
- * Tymczasowy podgląd kroku 2: pokazuje wynik parsera (model, spis treści, uwagi).
- * Czytnik (Lit) powstaje w kroku 3.
- */
+/** Playground: wybór przykładowego skryptu i podgląd w czytniku. */
 const fixtures: Record<string, string> = {
   'python-podstawy.md': pythonPodstawy,
   'bledy-autora.md': bledyAutora,
@@ -16,17 +14,28 @@ const fixtures: Record<string, string> = {
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('Brak elementu #app');
 
+const toolbar = document.createElement('div');
+toolbar.className = 'toolbar';
+const label = document.createElement('label');
+label.textContent = 'Skrypt: ';
 const select = document.createElement('select');
 for (const name of Object.keys(fixtures)) select.add(new Option(name, name));
+label.append(select);
+const diagnosticsOutput = document.createElement('output');
+toolbar.append(label, diagnosticsOutput);
 
-const output = document.createElement('pre');
-output.style.whiteSpace = 'pre-wrap';
+const reader = document.createElement('skrypt-reader') as SkryptReader;
+reader.addEventListener('skrypt-diagnostics', (event) => {
+  const count = (event as CustomEvent<unknown[]>).detail.length;
+  diagnosticsOutput.textContent = `Uwagi dla autora: ${count} (szczegóły w konsoli)`;
+  console.warn('[skrypt] diagnostyka', (event as CustomEvent).detail);
+});
 
-function render(): void {
-  const { document: doc, diagnostics } = parseScript(fixtures[select.value] ?? '');
-  output.textContent = JSON.stringify({ toc: doc.toc, diagnostics, document: doc }, null, 2);
+function load(): void {
+  diagnosticsOutput.textContent = '';
+  reader.markdown = fixtures[select.value] ?? '';
 }
 
-select.addEventListener('change', render);
-app.append(select, output);
-render();
+select.addEventListener('change', load);
+app.append(toolbar, reader);
+load();

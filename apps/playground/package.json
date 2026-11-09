@@ -8,7 +8,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@skrypt/core": "workspace:*"
+    "@skrypt/elements": "workspace:*"
   },
   "devDependencies": {
     "vite": "^8.3.7"
