@@ -205,7 +205,7 @@ ScriptDocument (serializowalny JSON) + Diagnostic[]
 UI
 ```
 
-Model `ScriptDocument` przechowuje bloki markdown jako **tokeny lub źródło markdown, nie gotowy HTML**. Renderowanie do HTML (krok 8) to osobny, wymienialny moduł. Dzięki temu:
+Model `ScriptDocument` przechowuje bloki markdown jako **tokeny lub źródło markdown, nie gotowy HTML**. Renderowanie do HTML (etap 8 pipeline’u) to osobny, wymienialny moduł. Dzięki temu:
 - ten sam model może wyrenderować aplikacja w React bez Web Components (tryb headless);
 - sanityzację i rozszerzenia (KaTeX, Mermaid, podświetlanie składni) konfiguruje się w jednym miejscu;
 - testy struktury nie zależą od formatu HTML.
@@ -277,7 +277,7 @@ Konwencja trafi do krótkiego poradnika dla nauczycieli (`docs/poradnik-autora.m
 
 ### 4.2 Pułapki potwierdzone testem na `marked@18`
 
-1. **Front matter nie jest obsługiwany przez marked.** `---\ntitle: Test\n---` daje token `hr` oraz nagłówek H2 „title: Test”, czyli mapper utworzyłby fałszywy rozdział. Front matter trzeba wyciąć przed lexerem (krok 1).
+1. **Front matter nie jest obsługiwany przez marked.** `---\ntitle: Test\n---` daje token `hr` oraz nagłówek H2 „title: Test”, czyli mapper utworzyłby fałszywy rozdział. Front matter trzeba wyciąć przed lexerem (etap 1 pipeline’u).
 2. **`---` bezpośrednio pod linią tekstu to nagłówek H2 (setext), a nie separator.** `Tekst\n---` daje `heading depth:2`, czyli nowy rozdział zamiast nowej sekcji. Dlatego konwencja to `***`. Walidator ostrzega o nagłówkach setext (token ma `raw` bez `#`) i o `---` w treści. Pojedyncze `---` otoczone pustymi liniami parser mimo to traktuje jak separator sekcji (z ostrzeżeniem), żeby nie gubić intencji autora.
 3. **Surowy HTML przechodzi bez zmian.** `<script>alert(1)</script>` w .md trafia do wyniku dosłownie (opcję `sanitize` usunięto z marked).
 
