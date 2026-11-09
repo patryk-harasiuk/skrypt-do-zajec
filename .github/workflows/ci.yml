@@ -19,4 +19,28 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm test:unit
+      - run: pnpm build
+
+  # Testy układu i przewijania w prawdziwych przeglądarkach.
+  browser:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    # Chromium jest sprawdzany lokalnie i musi przechodzić. Firefox i WebKit dają sygnał
+    # o różnicach między przeglądarkami, ale ich wyniki nie blokują jeszcze zmian.
+    continue-on-error: ${{ matrix.browser != 'chromium' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
+      - run: pnpm test:browser
+        env:
+          BROWSERS: ${{ matrix.browser }}

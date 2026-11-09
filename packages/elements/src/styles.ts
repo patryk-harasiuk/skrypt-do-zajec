@@ -44,7 +44,7 @@ export const contentStyles = css`
     font-family: var(--_font);
     font-size: var(--_font-size);
     line-height: 1.7;
-    color: var(--_fg);
+    color: var(--_section-fg, var(--_fg));
     overflow-wrap: break-word;
   }
   .content > :first-child {

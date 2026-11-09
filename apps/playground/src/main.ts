@@ -2,12 +2,14 @@ import '@skrypt/elements';
 import type { SkryptReader } from '@skrypt/elements';
 import pythonPodstawy from '../../../fixtures/python-podstawy.md?raw';
 import bledyAutora from '../../../fixtures/bledy-autora.md?raw';
+import dlugaSekcja from '../../../fixtures/dluga-sekcja.md?raw';
 import xss from '../../../fixtures/xss.md?raw';
 
 /** Playground: wybór przykładowego skryptu i podgląd w czytniku. */
 const fixtures: Record<string, string> = {
   'python-podstawy.md': pythonPodstawy,
   'bledy-autora.md': bledyAutora,
+  'dluga-sekcja.md': dlugaSekcja,
   'xss.md': xss,
 };
 
@@ -34,6 +36,8 @@ reader.addEventListener('skrypt-diagnostics', (event) => {
 function load(): void {
   diagnosticsOutput.textContent = '';
   reader.markdown = fixtures[select.value] ?? '';
+  // Fokus w czytniku, żeby od razu działały strzałki.
+  void reader.updateComplete.then(() => reader.focusReader());
 }
 
 select.addEventListener('change', load);

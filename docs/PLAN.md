@@ -79,13 +79,13 @@ Cel: przechodzić strzałką od jednej części skryptu do następnej, tak jak p
 
 Treść i układ są w obu trybach takie same. Różni je tylko sposób wyróżnienia aktywnej sekcji, więc przełączenie nie zmienia pozycji czytelnika.
 
-| | Czytanie ciągłe (domyślne) | Czytanie po sekcjach |
+| | Czytanie ciągłe | Czytanie po sekcjach (domyślne) |
 |---|---|---|
 | Treść | cały rozdział w jednej kolumnie | to samo |
 | Aktywna sekcja | wyróżniona tylko w spisie treści | wyróżniona w treści: pełny kontrast i znacznik na marginesie, pozostałe sekcje przygaszone |
 | Strzałki ← → | przechodzą między sekcjami | to samo |
 | Pasek u dołu | brak | tytuł sekcji, „sekcja 4 z 9 w rozdziale”, cienki pasek postępu, przyciski ‹ › |
-| Włączenie | przycisk „Czytanie po sekcjach” w nagłówku czytnika (`aria-pressed`) albo właściwość `mode` ustawiona przez hosta | |
+| Włączenie | przełącznik „Czytanie po sekcjach” nad spisem treści (`aria-pressed`) albo właściwość `mode` ustawiona przez hosta | |
 
 Szkic trybu po sekcjach:
 
@@ -104,7 +104,7 @@ Szkic trybu po sekcjach:
 
 #### Jak działa „następna sekcja”
 
-1. **Linia czytania.** To poziomy pas mniej więcej 25% wysokości od góry obszaru czytania. Aktywna jest sekcja, która go przecina (`IntersectionObserver` z `rootMargin`). Zwykłe przewijanie myszą lub palcem też zmienia aktywną sekcję, więc strzałka zawsze rusza od miejsca, w którym czytelnik faktycznie jest.
+1. **Linia czytania.** To poziomy pas mniej więcej 25% wysokości od góry obszaru czytania. Aktywna jest ostatnia sekcja, której początek jest nad tą linią. Położenia sekcji sprawdzamy przy zdarzeniu `scroll` (raz na klatkę), a nie przez `IntersectionObserver`: potrzebna jest kolejność sekcji względem jednej linii, a nie informacja o przecięciu. Na końcu strony aktywna jest ostatnia sekcja. Zwykłe przewijanie myszą lub palcem też zmienia aktywną sekcję, więc strzałka zawsze rusza od miejsca, w którym czytelnik faktycznie jest.
 2. **Przejście.** → przewija tak, żeby początek następnej sekcji znalazł się ok. 15% od góry, pod przyklejonym paskiem. Koniec poprzedniej sekcji zostaje widoczny nad nią, więc czytelnik nie traci kontekstu.
 3. **Długa sekcja** (wyższa niż ekran). → najpierw przewija w obrębie sekcji o ok. 85% wysokości ekranu, z zakładką ok. dwóch linii tekstu. Do następnej sekcji przechodzi dopiero wtedy, gdy widać koniec bieżącej. ← działa symetrycznie: najpierw wraca do początku bieżącej sekcji, potem do poprzedniej. Dzięki temu strzałka nigdy nie pomija bloku kodu ani tabeli.
 4. **Granica rozdziału.** → w ostatniej sekcji otwiera następny rozdział od jego tytułu. Shift + ← / → przechodzi o cały rozdział. Z okładki (tytuł i spis treści) → prowadzi do pierwszej sekcji.
@@ -120,7 +120,7 @@ Szkic trybu po sekcjach:
 | ↑ ↓ PgUp PgDn spacja Home End | bez zmian, zwykłe przewijanie przeglądarki |
 
 Biblioteka jest osadzana w cudzej aplikacji, więc nie może przejmować klawiszy całej strony bez zgody hosta:
-- właściwość `keyboard`: `'focus'` (domyślnie; klawisze działają, gdy fokus jest w czytniku, a kliknięcie w treść ustawia fokus na obszarze czytania), `'page'` (cała strona, dla aplikacji, w których czytnik zajmuje cały ekran) lub `'none'`;
+- właściwość `keyboard`: `'focus'` (domyślnie; klawisze działają, gdy fokus jest w czytniku, a kliknięcie w treść ustawia fokus na obszarze czytania, który nie jest przystankiem klawisza Tab), `'page'` (cała strona, dla aplikacji, w których czytnik zajmuje cały ekran) lub `'none'`;
 - pomijamy zdarzenia z Ctrl / Alt / Meta oraz z pól formularza, `contenteditable` i elementów, które same obsługują strzałki (np. przyciski radio w przyszłym quizie);
 - `preventDefault()` wywołujemy tylko wtedy, gdy nawigacja faktycznie nastąpiła.
 
@@ -149,12 +149,12 @@ Bez klawiatury nawigację zapewniają przyciski ‹ › na pasku u dołu (cel do
 - **`core`:** kolejność sekcji i polecenia `next`, `previous`, `nextChapter`, `previousChapter` (już istnieją). Nowa jest przyczyna zmiany `cause: 'navigate' | 'observe'`. `navigate` oznacza, że UI ma przewinąć do sekcji. `observe` oznacza, że sekcję wskazało przewijanie, więc UI niczego nie przewija. Bez tego rozróżnienia powstaje pętla: przewinięcie → obserwator → kolejne przewinięcie.
 - **`elements`:** geometria i zdarzenia przeglądarki:
   - czysta funkcja `planStep(geometria, kierunek)` zwraca `'scroll-within'` albo `'go-to-adjacent'` i ma testy bez przeglądarki;
-  - kontroler `SectionTracker` (`IntersectionObserver` + `scrollend`) ignoruje wyniki obserwatora w czasie programowego przewijania;
+  - kontroler `SectionTracker` ignoruje przewinięcia wywołane przez bibliotekę. Koniec przewijania wykrywa po tym, że pozycja nie zmienia się przez kilka klatek, bo `scrollend` nie pojawia się, gdy nic się nie przewinęło, a przy przewinięciu natychmiastowym bywa wysłane przed podsłuchaniem;
   - kontroler klawiatury stosuje zasady z poprzedniego punktu.
 - **Zdarzenie `skrypt-navigate`** z `{ chapterId, sectionId, cause }` informuje hosta o zmianie sekcji. Synchronizacja z prowadzącym (faza D) skorzysta z tego samego mechanizmu.
 
 ```ts
-reader.mode = 'sections';          // 'continuous' | 'sections', także atrybut mode="sections"
+reader.mode = 'sections';          // 'sections' (domyślnie) | 'continuous', także atrybut mode="..."
 reader.keyboard = 'focus';         // 'focus' | 'page' | 'none'
 reader.nextSection();              // to samo co →
 reader.previousSection();          // to samo co ←
@@ -472,11 +472,12 @@ Każdy krok kończy się działającą wersją w `apps/playground`, którą moż
 - Typografia i układ na telefon i desktop, teksty UI z `strings.pl.ts`.
 - *Gotowe gdy:* realny skrypt da się przeczytać od spisu treści do końca, każda pozycja spisu prowadzi we właściwe miejsce, test XSS z fixture'a nie wykonuje skryptu.
 
-**Krok 4. Czytanie po sekcjach** (pkt 2.1; łączy dawne kroki „prowadzenie po sekcjach” i „tryb skupienia”)
+**Krok 4. Czytanie po sekcjach** ✅ (pkt 2.1; łączy dawne kroki „prowadzenie po sekcjach” i „tryb skupienia”)
 - 4a. *Śledzenie i strzałki:* `cause` w store, `SectionTracker` (linia czytania), podświetlenie w spisie treści przy przewijaniu, klawisze ← → i Shift + ← →, właściwość `keyboard`, metody `nextSection` / `previousSection`, zdarzenie `skrypt-navigate`. Działa w obu trybach.
 - 4b. *Długie sekcje:* `planStep` (przewijanie w obrębie sekcji przed przejściem dalej) z testami jednostkowymi, fixture `dluga-sekcja.md`.
 - 4c. *Tryb po sekcjach:* przełącznik i `mode`, przygaszenie pozostałych sekcji, znacznik na marginesie, `<skrypt-section-bar>` z przyciskami dla telefonu, `aria-live`, `skrypt-mode-change`.
 - 4d. *Testy w przeglądarce:* Vitest browser mode (Chromium, Firefox, WebKit) dla przewijania i klawiszy, uruchamiane w CI.
+- Stan: 4a–4d gotowe. Testy w przeglądarce przechodzą w Chromium. Firefox i WebKit są skonfigurowane w CI, ale nie dało się ich uruchomić w środowisku deweloperskim (brak bibliotek systemowych), więc ich wyniki są jeszcze niezweryfikowane i nie blokują zmian.
 - *Gotowe gdy:* cały `python-podstawy.md` i `dluga-sekcja.md` da się przejść samymi strzałkami w obie strony bez pominięcia treści; przewinięcie myszą zmienia aktywną sekcję, a następna strzałka rusza od niej; strzałki nie działają, gdy fokus jest poza czytnikiem (`keyboard="focus"`); na telefonie to samo działa przyciskami.
 
 **Krok 5. Wzory** (pkt 5.1)
@@ -526,5 +527,5 @@ Adapter WebSocket jako osobny pakiet, statystyki odpowiedzi dla prowadzącego, w
 ## 9. Otwarte pytania
 
 1. Czy stopniowe odkrywanie (krok 9) ma być domyślnie włączone, czy opcjonalne?
-2. Domyślny tryb czytania: ciągły (propozycja) czy po sekcjach?
-3. Czy w trybie po sekcjach ↓ / ↑ też mają przechodzić między sekcjami? Propozycja: nie, zostają zwykłym przewijaniem, a sekcje zmieniają ← →.
+
+Rozstrzygnięte: domyślny jest tryb czytania po sekcjach, a ↑ / ↓ zostają zwykłym przewijaniem.

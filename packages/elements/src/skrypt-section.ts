@@ -4,23 +4,45 @@ import type { Section } from '@skrypt/core';
 import { renderBlock } from './block-views.ts';
 import { themeVariables } from './styles.ts';
 
+export interface SectionActivateDetail {
+  sectionId: string;
+}
+
 /** Jedna sekcja skryptu: opcjonalny tytuł i bloki. */
 export class SkryptSection extends LitElement {
   static override properties = {
     section: { attribute: false },
     number: { type: String },
     linkDefinitions: { attribute: false },
+    /** Tryb czytania; w trybie `sections` sekcje poza aktywną są przygaszone. */
+    mode: { type: String, reflect: true },
+    active: { type: Boolean, reflect: true },
   };
 
   declare section: Section | null;
   declare number: string | null;
   declare linkDefinitions: string;
+  declare mode: 'sections' | 'continuous';
+  declare active: boolean;
 
   constructor() {
     super();
     this.section = null;
     this.number = null;
     this.linkDefinitions = '';
+    this.mode = 'continuous';
+    this.active = false;
+    this.addEventListener('click', () => {
+      if (this.mode === 'sections' && !this.active && this.section) {
+        this.dispatchEvent(
+          new CustomEvent<SectionActivateDetail>('skrypt-section-activate', {
+            detail: { sectionId: this.section.id },
+            bubbles: true,
+            composed: true,
+          }),
+        );
+      }
+    });
   }
 
   static override styles = [
@@ -34,12 +56,30 @@ export class SkryptSection extends LitElement {
       :host(:not(:first-of-type)) {
         border-top: 1px dashed var(--_border);
       }
+      /* Tryb po sekcjach: znacznik na marginesie i przygaszenie sekcji nieaktywnych.
+         Przygaszamy kolorem (muted ma kontrast > 4.5:1), a nie przezroczystością. */
+      :host([mode='sections']) {
+        padding-left: 1rem;
+        border-left: 3px solid transparent;
+      }
+      :host([mode='sections'][active]) {
+        border-left-color: var(--_accent);
+      }
+      :host([mode='sections']:not([active])) {
+        --_section-fg: var(--_muted);
+        cursor: pointer;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        :host([mode='sections']) {
+          transition: border-color 0.15s;
+        }
+      }
       .title {
         margin: 0 0 0.75rem;
         font-family: var(--_font);
         font-size: 1.3rem;
         line-height: 1.3;
-        color: var(--_fg);
+        color: var(--_section-fg, var(--_fg));
       }
       .number {
         color: var(--_muted);
