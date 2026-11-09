@@ -1,7 +1,7 @@
 # Plan implementacji: interaktywny czytnik skryptów do zajęć
 
 Dokument weryfikuje wstępną koncepcję architektury („architektura-skrypt-w-edukacyjnych”) i rozpisuje prace na małe, kolejne kroki.
-Wersje bibliotek sprawdzone 2026-11-09: `marked@18.1.3`, `lit@3.3.3`, `dompurify@3.4.17`, `mermaid@12.3.0`, `katex@0.18.x` (`marked-katex-extension@5.1.13` wspiera `katex <0.19`), `github-slugger@2.0.0`.
+Wersje bibliotek sprawdzone 2026-11-09: `marked@18.1.3`, `lit@3.3.3`, `dompurify@3.4.17`, `mermaid@12.3.0`, `katex@0.19.1`, `github-slugger@2.0.0`. Zdarzenie `scrollend` jest dostępne we wszystkich docelowych przeglądarkach od Safari 26.2 ([InfoQ](https://infoq.com/news/2026/04/safari-scrollend-support/)).
 
 ---
 
@@ -16,6 +16,7 @@ Wersje bibliotek sprawdzone 2026-11-09: `marked@18.1.3`, `lit@3.3.3`, `dompurify
 | Przeglądarki | Aktualne Chrome, Edge (Chromium), Firefox, Safari (desktop i mobile). Bez IE i starego Edge (EdgeHTML). |
 | Spis treści | Jest od pierwszej wersji czytnika i prowadzi do rozdziałów i sekcji. |
 | Charakter UI | Ciągłe czytanie z prowadzeniem po sekcjach, a nie slajdy (pkt 2). |
+| Nawigacja po sekcjach | Strzałki ← → przechodzą między sekcjami. Osobny tryb „czytanie po sekcjach” wyróżnia aktywną sekcję w ciągłym tekście (pkt 2.1). |
 | Tempo | Funkcje dostarczane schodkowo, każdy krok to działająca, używalna wersja (pkt 8). |
 
 ---
@@ -70,6 +71,100 @@ W praktyce w UI oznacza to:
 - **Prowadzący wskazuje, a nie przełącza.** W sesji student widzi znacznik „prowadzący jest tutaj” i może do niego wrócić jednym kliknięciem. Sam nie jest przerzucany na siłę, chyba że włączy tryb podążania.
 - **Brak animacji przejść między slajdami.** Animacje są tylko funkcjonalne (pojawienie się odblokowanej sekcji, płynne przewinięcie) i wyłączają się przy `prefers-reduced-motion`.
 
+### 2.1 Tryb czytania po sekcjach
+
+Cel: przechodzić strzałką od jednej części skryptu do następnej, tak jak przewraca się kartkę w czytniku, ale bez zamieniania tekstu w slajdy.
+
+#### Jeden widok, dwa tryby
+
+Treść i układ są w obu trybach takie same. Różni je tylko sposób wyróżnienia aktywnej sekcji, więc przełączenie nie zmienia pozycji czytelnika.
+
+| | Czytanie ciągłe (domyślne) | Czytanie po sekcjach |
+|---|---|---|
+| Treść | cały rozdział w jednej kolumnie | to samo |
+| Aktywna sekcja | wyróżniona tylko w spisie treści | wyróżniona w treści: pełny kontrast i znacznik na marginesie, pozostałe sekcje przygaszone |
+| Strzałki ← → | przechodzą między sekcjami | to samo |
+| Pasek u dołu | brak | tytuł sekcji, „sekcja 4 z 9 w rozdziale”, cienki pasek postępu, przyciski ‹ › |
+| Włączenie | przycisk „Czytanie po sekcjach” w nagłówku czytnika (`aria-pressed`) albo właściwość `mode` ustawiona przez hosta | |
+
+Szkic trybu po sekcjach:
+
+```
+┌ Spis treści ──┐ ┌──────────────────────────────────────────┐
+│ 2 Pętle       │ │   …koniec poprzedniej sekcji (przygaszony) │
+│ ▌2.1 Pętla for│ │ ▌ 2.1 Pętla for                            │
+│  2.2 Schemat  │ │ ▌ Pętla for wykonuje instrukcje…           │
+│               │ │ ▌ ┌ kod ───────────────────┐               │
+│               │ │ ▌ └────────────────────────┘               │
+│               │ │   2.2 Schemat działania (przygaszony)      │
+│               │ ├──────────────────────────────────────────┤
+│               │ │ ‹   2.1 Pętla for · 1 z 3  ━━━━──────    › │
+└───────────────┘ └──────────────────────────────────────────┘
+```
+
+#### Jak działa „następna sekcja”
+
+1. **Linia czytania.** To poziomy pas mniej więcej 25% wysokości od góry obszaru czytania. Aktywna jest sekcja, która go przecina (`IntersectionObserver` z `rootMargin`). Zwykłe przewijanie myszą lub palcem też zmienia aktywną sekcję, więc strzałka zawsze rusza od miejsca, w którym czytelnik faktycznie jest.
+2. **Przejście.** → przewija tak, żeby początek następnej sekcji znalazł się ok. 15% od góry, pod przyklejonym paskiem. Koniec poprzedniej sekcji zostaje widoczny nad nią, więc czytelnik nie traci kontekstu.
+3. **Długa sekcja** (wyższa niż ekran). → najpierw przewija w obrębie sekcji o ok. 85% wysokości ekranu, z zakładką ok. dwóch linii tekstu. Do następnej sekcji przechodzi dopiero wtedy, gdy widać koniec bieżącej. ← działa symetrycznie: najpierw wraca do początku bieżącej sekcji, potem do poprzedniej. Dzięki temu strzałka nigdy nie pomija bloku kodu ani tabeli.
+4. **Granica rozdziału.** → w ostatniej sekcji otwiera następny rozdział od jego tytułu. Shift + ← / → przechodzi o cały rozdział. Z okładki (tytuł i spis treści) → prowadzi do pierwszej sekcji.
+5. **Kliknięcie** w przygaszoną sekcję czyni ją aktywną bez przewijania.
+
+#### Klawiatura
+
+| Klawisz | Działanie |
+|---|---|
+| → | następna sekcja (w długiej sekcji: dalej w obrębie sekcji) |
+| ← | poprzednia sekcja (w długiej sekcji: najpierw jej początek) |
+| Shift + → / ← | następny / poprzedni rozdział |
+| ↑ ↓ PgUp PgDn spacja Home End | bez zmian, zwykłe przewijanie przeglądarki |
+
+Biblioteka jest osadzana w cudzej aplikacji, więc nie może przejmować klawiszy całej strony bez zgody hosta:
+- właściwość `keyboard`: `'focus'` (domyślnie; klawisze działają, gdy fokus jest w czytniku, a kliknięcie w treść ustawia fokus na obszarze czytania), `'page'` (cała strona, dla aplikacji, w których czytnik zajmuje cały ekran) lub `'none'`;
+- pomijamy zdarzenia z Ctrl / Alt / Meta oraz z pól formularza, `contenteditable` i elementów, które same obsługują strzałki (np. przyciski radio w przyszłym quizie);
+- `preventDefault()` wywołujemy tylko wtedy, gdy nawigacja faktycznie nastąpiła.
+
+#### Telefon i tablet
+
+Bez klawiatury nawigację zapewniają przyciski ‹ › na pasku u dołu (cel dotyku min. 44 px). Celowo nie ma gestów przesunięcia w bok. Mylą się z przewijaniem szerokich tabel i bloków kodu, a poza tym to one najbardziej upodabniają czytnik do prezentacji.
+
+#### Czym ten tryb różni się od reveal.js i remark
+
+| reveal.js / remark | Tryb po sekcjach |
+|---|---|
+| Na ekranie jeden slajd, reszta ukryta | Cały rozdział na stronie. Sąsiednie sekcje są widoczne, tylko przygaszone |
+| Treść wyśrodkowana i skalowana do stałej ramki | Zwykła kolumna tekstu z tą samą typografią co w czytaniu ciągłym |
+| Animacja przejścia (przesunięcie, zanikanie, zoom) | Zwykłe przewinięcie. Przygaszenie zmienia się w ok. 150 ms, a przy `prefers-reduced-motion` bez animacji |
+| Strzałka zawsze skacze o cały slajd | W długiej sekcji strzałka przewija treść dalej |
+| Duży numer slajdu, kropki postępu | Skromny pasek u dołu z tytułem sekcji i cienkim paskiem postępu |
+| Wyjście z prezentacji to inny widok | Przełącznik zmienia tylko wyróżnienie, pozycja zostaje |
+
+#### Dostępność
+
+- Region `aria-live="polite"` ogłasza zmianę, np. „Sekcja 2.1: Pętla for”. Fokus zostaje na obszarze czytania.
+- Przygaszony tekst musi pozostać czytelny. Zamiast niskiej przezroczystości używamy koloru `--_muted` z kontrastem co najmniej 4.5:1.
+
+#### Podział odpowiedzialności
+
+- **`core`:** kolejność sekcji i polecenia `next`, `previous`, `nextChapter`, `previousChapter` (już istnieją). Nowa jest przyczyna zmiany `cause: 'navigate' | 'observe'`. `navigate` oznacza, że UI ma przewinąć do sekcji. `observe` oznacza, że sekcję wskazało przewijanie, więc UI niczego nie przewija. Bez tego rozróżnienia powstaje pętla: przewinięcie → obserwator → kolejne przewinięcie.
+- **`elements`:** geometria i zdarzenia przeglądarki:
+  - czysta funkcja `planStep(geometria, kierunek)` zwraca `'scroll-within'` albo `'go-to-adjacent'` i ma testy bez przeglądarki;
+  - kontroler `SectionTracker` (`IntersectionObserver` + `scrollend`) ignoruje wyniki obserwatora w czasie programowego przewijania;
+  - kontroler klawiatury stosuje zasady z poprzedniego punktu.
+- **Zdarzenie `skrypt-navigate`** z `{ chapterId, sectionId, cause }` informuje hosta o zmianie sekcji. Synchronizacja z prowadzącym (faza D) skorzysta z tego samego mechanizmu.
+
+```ts
+reader.mode = 'sections';          // 'continuous' | 'sections', także atrybut mode="sections"
+reader.keyboard = 'focus';         // 'focus' | 'page' | 'none'
+reader.nextSection();              // to samo co →
+reader.previousSection();          // to samo co ←
+// zdarzenia: skrypt-navigate, skrypt-mode-change
+```
+
+#### Testy
+
+jsdom nie liczy układu strony, więc logikę geometrii testujemy jako czystą funkcję. Prawdziwe przewijanie sprawdzają testy w przeglądarce (Vitest browser mode z Playwright: Chromium, Firefox, WebKit) na nowym fixture `dluga-sekcja.md`. Fixture ma sekcję dłuższą niż ekran, tabelę i sekcje bez tytułu.
+
 ---
 
 ## 3. Architektura
@@ -82,7 +177,7 @@ Monorepo (pnpm workspaces). Fizyczny podział na pakiety sprawia, że separacji 
 packages/
   core/          # czysty TS, bez DOM: model, pipeline, store, typy zdarzeń sync
   elements/      # Lit Web Components, zależy od core
-  blocks-quiz/   # (krok 9) plugin quizu: parser + komponent
+  blocks-quiz/   # (krok 10) plugin quizu: parser + komponent
 apps/
   playground/    # Vite, przykładowe skrypty, ręczne testy, demo prowadzący/student
 fixtures/        # przykładowe pliki .md (także przypadki brzegowe) wspólne dla testów
@@ -97,7 +192,7 @@ Każdy krok to czysta funkcja z osobnymi testami:
 ```
 string .md (od hosta)
   │ 1. preprocess   wycięcie front matter (YAML) → metadata; normalizacja końców linii
-  │ 2. lex          marked.lexer() (+ rozszerzenie KaTeX) → Token[]
+  │ 2. lex          marked Lexer (+ tokenizer wzorów $ i $$, bez KaTeX) → Token[]
   │ 3. group        maszyna stanów: Token[] → drzewo Chapter/Section z tokenami
   │ 4. blocks       tokeny → ContentBlock (rejestr parserów bloków: math, mermaid, quiz, callout, ...)
   │ 5. ids          deterministyczne ID (slug + jawne ID), wykrywanie duplikatów
@@ -164,7 +259,7 @@ Właściwości, a nie atrybuty HTML: skrypty mają dziesiątki kilobajtów, a at
 
 ### 4.1 Konwencja dla autorów
 
-Konwencja trafi do krótkiego poradnika dla nauczycieli (`docs/poradnik-autora.md`, krok 4) z przykładowym skryptem.
+Konwencja trafi do krótkiego poradnika dla nauczycieli (`docs/poradnik-autora.md`, krok 7) z przykładowym skryptem.
 
 | Markdown | Znaczenie |
 |---|---|
@@ -220,15 +315,65 @@ Biblioteka będzie osadzana w cudzych aplikacjach, więc HTML z markdown sanityz
 
 | | Wzory | Diagramy |
 |---|---|---|
-| Biblioteka | KaTeX 0.18.x przez `marked-katex-extension` | Mermaid 12 |
+| Biblioteka | KaTeX 0.19 przez własne rozszerzenie marked (pkt 5.1) | Mermaid 12 |
 | Składnia | `$x^2$` inline, `$$...$$` blokowo | blok ```` ```mermaid ```` |
-| Kiedy renderowane | przy renderowaniu bloku (synchronicznie, szybko) | asynchronicznie, gdy blok zbliża się do widoku (`IntersectionObserver`) |
+| Kiedy renderowane | przed wyświetleniem rozdziału (synchronicznie, szybko) | asynchronicznie, gdy blok zbliża się do widoku (`IntersectionObserver`) |
 | Ładowanie | dynamiczny `import()`, tylko jeśli dokument zawiera wzory | dynamiczny `import()`, tylko jeśli dokument zawiera diagram |
-| Błąd w treści | czytelny komunikat w miejscu wzoru + `Diagnostic` | komunikat w miejscu diagramu + `Diagnostic`, reszta strony działa |
+| Błąd w treści | komunikat w miejscu wzoru + `Diagnostic` | komunikat w miejscu diagramu + `Diagnostic`, reszta strony działa |
 
-Mermaid jest duży (kilkaset KB), więc ładujemy go leniwie i tylko gdy jest potrzebny. Diagram dostaje zarezerwowane miejsce przed renderem, żeby treść nie skakała. Motyw Mermaid (jasny / ciemny) podąża za ustawieniem czytnika.
+W `core` wzory i diagramy to bloki ze źródłem tekstowym (`math`, `mermaid`). Renderuje je dopiero warstwa UI, więc `core` pozostaje bez DOM i bez KaTeX.
 
-W `core` wzory i diagramy to zwykłe bloki (`math`, `mermaid`) ze źródłem tekstowym. Renderuje je dopiero warstwa UI, więc `core` pozostaje bez DOM.
+**Ważne dla trybu po sekcjach:** wysokość sekcji nie może się zmieniać po przewinięciu do niej. Inaczej strzałka trafia w złe miejsce, a treść podskakuje pod okiem czytelnika. Dlatego wzory renderujemy przed wyświetleniem rozdziału, a nawigacja do sekcji z diagramem czeka, aż diagram się narysuje (pkt 5.2).
+
+### 5.1 Wzory (KaTeX)
+
+**Decyzja: własne, małe rozszerzenie marked zamiast `marked-katex-extension`.** Powody:
+- `marked-katex-extension` łączy rozpoznawanie wzorów z ich renderowaniem, więc `core` musiałby importować KaTeX;
+- wersja 5.1.13 wymaga `katex <0.19`, a aktualna to 0.19.1;
+- wzory blokowe potrzebujemy jako osobnych bloków modelu.
+
+Koszt to ok. 60 linii kodu i testy reguł dla znaku `$`.
+
+**Składnia**
+- `$...$` w tekście, `$$...$$` jako osobny blok, także w wielu liniach (np. `\begin{aligned}`).
+- Reguła dolara (jak w Pandoc): po otwierającym `$` nie może być spacji, przed zamykającym też nie, a zaraz po zamykającym nie może stać cyfra. Dzięki temu „bilet kosztuje 5$, a karnet 10$” nie staje się wzorem.
+- `\$` daje dosłowny znak dolara. Kod (`` `$HOME` ``) nigdy nie jest wzorem.
+
+**Przepływ**
+
+| Warstwa | Co robi |
+|---|---|
+| `core` / lex | tokenizer `$$` (blok) i `$` (inline), samo rozpoznanie bez KaTeX. Chroni też treść wzoru: `***` czy `#` wewnątrz `$$` nie dzielą sekcji |
+| `core` / group | `$$` na najwyższym poziomie staje się blokiem `MathBlock { type: 'math', id, tex }`. `$$` w liście lub cytacie oraz wzory inline zostają w bloku markdown |
+| `core` / model | `document.features = { math, mermaid }`, żeby UI wiedziało, czy ładować biblioteki |
+| `elements` / ładowanie | `import('katex')` tylko gdy `features.math`. Pobieranie zaczyna się od razu po parsowaniu, a rozdział wyświetla się po załadowaniu (krótki stan „Ładowanie wzorów…”) |
+| `elements` / render | renderer wzorów inline w bloku markdown i widok `MathBlock`: `katex.renderToString` → DOMPurify |
+
+**Opcje KaTeX:** `throwOnError: false`, `trust: false` (blokuje `\href`, `\url`, `\includegraphics` z zewnętrznymi adresami), `strict: 'warn'`, `maxSize` i `maxExpand` z limitami (ochrona przed wzorem, który zawiesza kartę), `output: 'htmlAndMathml'` (MathML dla czytników ekranu).
+
+**Makra autora:** front matter `math.macros`, np. `"\\R": "\\mathbb{R}"`. Wygodne dla nauczycieli matematyki, mały koszt.
+
+**Bezpieczeństwo:** wynik KaTeX też przechodzi przez DOMPurify. Testy sprawdzają dwie rzeczy:
+- wynik KaTeX przechodzi bez strat (atrybuty `style`, elementy MathML);
+- `\href{javascript:alert(1)}{x}` i HTML w `\text{}` nie dają aktywnej treści.
+
+**Style i czcionki**
+- Reguły CSS KaTeX trafiają do jednego współdzielonego `CSSStyleSheet` w `adoptedStyleSheets` bloków.
+- `@font-face` dodajemy raz do `document.head`, bo Shadow DOM ich nie stosuje. Opcja `mathFonts: 'inject' | 'host'`: przy `'host'` aplikacja sama ładuje `katex.css`.
+- Czcionki są assetami pakietu. Host może podać własny adres (`mathFontsBaseUrl`), np. CDN.
+
+**Szerokie wzory:** blok wzoru ma `overflow-x: auto`, żeby długie równanie nie rozpychało kolumny na telefonie.
+
+**Błędy:** przy `throwOnError: false` KaTeX pokazuje źródło wzoru na czerwono w jego miejscu. Dodatkowo `skrypt-diagnostics` dostaje uwagę `math-error` z numerem linii (dla `MathBlock`) i komunikatem. Błędy wzorów wychodzą przy renderowaniu, więc dotyczą wyświetlonych rozdziałów. Do sprawdzenia całego skryptu (np. w podglądzie dla autora) służy `validateMath(document)`.
+
+### 5.2 Diagramy (Mermaid)
+
+- `<skrypt-block-mermaid>` rezerwuje miejsce przed renderem (min. ok. 12rem). Diagram rysuje się, gdy blok jest najwyżej jeden ekran od widoku.
+- Nawigacja do sekcji z nienarysowanym diagramem najpierw go rysuje (limit ok. 1 s), a dopiero potem przewija. Diagramy w sekcjach powyżej aktywnej nie mogą przesunąć tekstu: po zmianie ich wysokości przewinięcie jest korygowane o różnicę.
+- `securityLevel: 'strict'`, wynikowe SVG przez DOMPurify. Do sprawdzenia w implementacji: etykiety HTML (`foreignObject`) kontra czyste SVG.
+- Błąd: najpierw `mermaid.parse()`, a przy błędzie komunikat ze źródłem i uwaga `mermaid-error`.
+- Dostępność: `accTitle` / `accDescr` z Mermaid. Poradnik autora zachęca do ich dodawania.
+- Motyw jasny teraz, ciemny razem z ustawieniami czytelnika (krok 8).
 
 ---
 
@@ -275,7 +420,9 @@ Ograniczenie: wewnątrz ```` ``` ```` nie da się wstawić bloku kodu bez użyci
 
 | Komponent | Odpowiedzialność |
 |---|---|
-| `<skrypt-reader>` | publiczne API: `markdown` / `document`, `mode`, `syncState`; zdarzenia; układ |
+| `<skrypt-reader>` | publiczne API: `markdown` / `document`, `mode`, `keyboard`, `syncState`; zdarzenia; układ |
+| `<skrypt-section-bar>` | pasek trybu po sekcjach: tytuł sekcji, „4 z 9”, postęp, przyciski ‹ › |
+| `<skrypt-block-math>` | wzór blokowy (KaTeX) |
 | `<skrypt-toc>` | spis treści: rozdziały i sekcje, numeracja, aktualna pozycja, później stany (ukończona / zablokowana / prowadzący tu jest) |
 | `<skrypt-chapter>` | rozdział jako jedna przewijana strona z sekcjami |
 | `<skrypt-section>` | sekcja: wyróżnienie aktywnej, stan blokady, znacznik prowadzącego |
@@ -304,7 +451,7 @@ Zdarzenia publiczne (typowane, `bubbles + composed`):
 
 ## 8. Plan prac: małe kroki
 
-Każdy krok kończy się działającą wersją w `apps/playground`, którą można pokazać i używać. Kolejny krok zaczynamy po akceptacji poprzedniego. Kroki 1–5 dają pierwszą użyteczną wersję (czytnik ze spisem treści), a dalsze dokładają funkcje po kolei.
+Każdy krok kończy się działającą wersją w `apps/playground`, którą można pokazać i używać. Kolejny krok zaczynamy po akceptacji poprzedniego. Kroki 1–7 dają pierwszą pełną wersję czytnika (spis treści, czytanie po sekcjach, wzory, diagramy), a dalsze dokładają funkcje po kolei.
 
 ### Faza A: czytanie (pierwsza użyteczna wersja)
 
@@ -325,41 +472,50 @@ Każdy krok kończy się działającą wersją w `apps/playground`, którą moż
 - Typografia i układ na telefon i desktop, teksty UI z `strings.pl.ts`.
 - *Gotowe gdy:* realny skrypt da się przeczytać od spisu treści do końca, każda pozycja spisu prowadzi we właściwe miejsce, test XSS z fixture'a nie wykonuje skryptu.
 
-**Krok 4. Wzory i diagramy**
-- KaTeX (leniwie, czcionki w `document.head`), Mermaid jako pierwszy plugin rejestru bloków (leniwie, przy zbliżeniu do widoku), podświetlanie składni kodu.
-- Błędy we wzorach i diagramach jako komunikaty w miejscu bloku i `Diagnostic`.
-- Poradnik autora (`docs/poradnik-autora.md`).
-- *Gotowe gdy:* fixture z wzorami i diagramami renderuje się poprawnie w Chrome, Firefox i Safari; dokument bez wzorów i diagramów nie ładuje KaTeX ani Mermaid.
+**Krok 4. Czytanie po sekcjach** (pkt 2.1; łączy dawne kroki „prowadzenie po sekcjach” i „tryb skupienia”)
+- 4a. *Śledzenie i strzałki:* `cause` w store, `SectionTracker` (linia czytania), podświetlenie w spisie treści przy przewijaniu, klawisze ← → i Shift + ← →, właściwość `keyboard`, metody `nextSection` / `previousSection`, zdarzenie `skrypt-navigate`. Działa w obu trybach.
+- 4b. *Długie sekcje:* `planStep` (przewijanie w obrębie sekcji przed przejściem dalej) z testami jednostkowymi, fixture `dluga-sekcja.md`.
+- 4c. *Tryb po sekcjach:* przełącznik i `mode`, przygaszenie pozostałych sekcji, znacznik na marginesie, `<skrypt-section-bar>` z przyciskami dla telefonu, `aria-live`, `skrypt-mode-change`.
+- 4d. *Testy w przeglądarce:* Vitest browser mode (Chromium, Firefox, WebKit) dla przewijania i klawiszy, uruchamiane w CI.
+- *Gotowe gdy:* cały `python-podstawy.md` i `dluga-sekcja.md` da się przejść samymi strzałkami w obie strony bez pominięcia treści; przewinięcie myszą zmienia aktywną sekcję, a następna strzałka rusza od niej; strzałki nie działają, gdy fokus jest poza czytnikiem (`keyboard="focus"`); na telefonie to samo działa przyciskami.
 
-**Krok 5. Prowadzenie po sekcjach**
-- Śledzenie aktywnej sekcji przy przewijaniu, podświetlenie w spisie treści.
-- Przyciski i skróty klawiszowe: poprzednia / następna sekcja, poprzedni / następny rozdział.
-- Pasek postępu, zapamiętanie pozycji (`StorageAdapter`), zdarzenie `skrypt-navigate`.
-- *Gotowe gdy:* po przeładowaniu czytelnik wraca do tej samej sekcji, cała nawigacja działa z klawiatury.
+**Krok 5. Wzory** (pkt 5.1)
+- Tokenizer `$` / `$$` w `core`, `MathBlock`, `document.features`, testy reguły dolara (kwoty, `\$`, kod inline, `$$` wieloliniowe, `***` wewnątrz wzoru).
+- Leniwe ładowanie KaTeX, renderer inline i `<skrypt-block-math>`, czcionki w `document.head`, sanityzacja z testami, uwagi `math-error`, makra z front matter.
+- Fixture z wzorami (ułamki, macierze, `aligned`, błędny wzór).
+- *Gotowe gdy:* fixture renderuje się poprawnie w Chrome, Firefox i Safari; dokument bez wzorów nie pobiera KaTeX; po wyświetleniu rozdziału wysokość sekcji się nie zmienia (test w przeglądarce); błędny wzór nie psuje reszty strony.
+
+**Krok 6. Diagramy** (pkt 5.2)
+- `<skrypt-block-mermaid>` z rezerwacją miejsca i leniwym renderem, sanityzacja SVG, uwagi `mermaid-error`.
+- Współpraca z trybem po sekcjach: przejście czeka na diagram, korekta przewinięcia po zmianie wysokości.
+- *Gotowe gdy:* przejście strzałkami przez sekcje z diagramami nie powoduje skoków treści; dokument bez diagramów nie pobiera Mermaid.
+
+**Krok 7. Kod i poradnik autora**
+- Podświetlanie składni (leniwie, tylko dla użytych języków).
+- Poradnik autora (`docs/poradnik-autora.md`): struktura, `***`, `{#id}`, wzory, diagramy, typowe błędy z walidatora.
+- *Gotowe gdy:* nauczyciel bez znajomości projektu napisze według poradnika skrypt, który parsuje się bez uwag.
 
 ### Faza B: wygoda czytania
 
-**Krok 6. Ustawienia czytelnika:** rozmiar czcionki, motyw jasny / sepia / ciemny (także dla diagramów), szerokość kolumny; zapis w `StorageAdapter`.
+**Krok 8. Ustawienia i pamięć pozycji:** rozmiar czcionki, motyw jasny / sepia / ciemny (także dla diagramów), szerokość kolumny, domyślny tryb czytania; `StorageAdapter`; powrót do ostatniej sekcji po przeładowaniu.
 
-**Krok 7. Tryb skupienia:** przygaszenie sekcji poza aktywną, znacznik na marginesie.
-
-**Krok 8. Stopniowe odkrywanie (opcja):** kolejna sekcja pojawia się po „Dalej”; animacja wyłączana przy `prefers-reduced-motion`.
+**Krok 9. Stopniowe odkrywanie (opcja):** kolejna sekcja pojawia się po „Dalej”; animacja wyłączana przy `prefers-reduced-motion`. Korzysta z nawigacji z kroku 4.
 
 ### Faza C: interakcja
 
-**Krok 9. Quiz:** pakiet `blocks-quiz`, składnia z pkt 6.2, zapis odpowiedzi, zdarzenie `skrypt-quiz-answer`.
+**Krok 10. Quiz:** pakiet `blocks-quiz`, składnia z pkt 6.2, zapis odpowiedzi, zdarzenie `skrypt-quiz-answer`.
 
-**Krok 10. Blokowanie sekcji quizem:** polityka dostępu w trybie samodzielnym, stany sekcji w spisie treści.
+**Krok 11. Blokowanie sekcji quizem:** polityka dostępu w trybie samodzielnym, stany sekcji w spisie treści; → zatrzymuje się przed zablokowaną sekcją.
 
-**Krok 11. Callout:** drugi prosty plugin, sprawdza, czy rejestr bloków jest ogólny.
+**Krok 12. Callout:** drugi prosty plugin, sprawdza, czy rejestr bloków jest ogólny.
 
 ### Faza D: sesja z prowadzącym
 
-**Krok 12. Stan sesji:** `SessionState`, `docVersion`, polityka dostępu prowadzącego, wejście `syncState` i zdarzenie `skrypt-session-change`.
+**Krok 13. Stan sesji:** `SessionState`, `docVersion`, polityka dostępu prowadzącego, wejście `syncState` i zdarzenie `skrypt-session-change`.
 
-**Krok 13. Widok studenta:** znacznik „prowadzący jest tutaj” w treści i spisie, baner powrotu, tryb podążania, odblokowane sekcje dostępne do przeglądania.
+**Krok 14. Widok studenta:** znacznik „prowadzący jest tutaj” w treści i spisie, baner powrotu, tryb podążania, odblokowane sekcje dostępne do przeglądania.
 
-**Krok 14. Demo bez backendu:** interfejs `SyncTransport` i implementacja na `BroadcastChannel` w playground (dwie karty = prowadzący i student).
+**Krok 15. Demo bez backendu:** interfejs `SyncTransport` i implementacja na `BroadcastChannel` w playground (dwie karty = prowadzący i student).
 - *Gotowe gdy:* prowadzący przesuwa i odblokowuje sekcje, student podąża, może cofnąć się do odblokowanych sekcji i wrócić jednym kliknięciem.
 
 ### Później (poza zakresem planu)
@@ -369,4 +525,6 @@ Adapter WebSocket jako osobny pakiet, statystyki odpowiedzi dla prowadzącego, w
 
 ## 9. Otwarte pytania
 
-1. Czy stopniowe odkrywanie (krok 8) ma być domyślnie włączone, czy opcjonalne?
+1. Czy stopniowe odkrywanie (krok 9) ma być domyślnie włączone, czy opcjonalne?
+2. Domyślny tryb czytania: ciągły (propozycja) czy po sekcjach?
+3. Czy w trybie po sekcjach ↓ / ↑ też mają przechodzić między sekcjami? Propozycja: nie, zostają zwykłym przewijaniem, a sekcje zmieniają ← →.
