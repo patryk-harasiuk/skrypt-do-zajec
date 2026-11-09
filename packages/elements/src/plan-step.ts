@@ -11,6 +11,11 @@ export interface StepGeometry {
   /** Położenie bieżącej sekcji. */
   sectionTop: number;
   sectionBottom: number;
+  /**
+   * Wysokość, na której ląduje początek. Domyślnie linia lądowania sekcji (`anchorY`).
+   * Pierwsza sekcja rozdziału ląduje inaczej: pokazujemy tytuł rozdziału.
+   */
+  landing?: number;
 }
 
 export type StepPlan =
@@ -54,7 +59,7 @@ export function planStep(geometry: StepGeometry, direction: 1 | -1): StepPlan {
     return { kind: 'go-to-adjacent' };
   }
 
-  const anchor = anchorY(geometry.visibleTop, geometry.visibleBottom);
+  const anchor = geometry.landing ?? anchorY(geometry.visibleTop, geometry.visibleBottom);
   const hidden = anchor - geometry.sectionTop;
   if (hidden > TOLERANCE) {
     return { kind: 'scroll-within', delta: -Math.min(STEP_RATIO * height, hidden) };

@@ -71,6 +71,16 @@ W praktyce w UI oznacza to:
 - **Prowadzący wskazuje, a nie przełącza.** W sesji student widzi znacznik „prowadzący jest tutaj” i może do niego wrócić jednym kliknięciem. Sam nie jest przerzucany na siłę, chyba że włączy tryb podążania.
 - **Brak animacji przejść między slajdami.** Animacje są tylko funkcjonalne (pojawienie się odblokowanej sekcji, płynne przewinięcie) i wyłączają się przy `prefers-reduced-motion`.
 
+### 2.0 Motyw „Książka” (domyślny wygląd)
+
+Wygląd ma przypominać dobrze wydany skrypt, bez sztucznego dzielenia na strony:
+
+- **Typografia:** szeryfowy stos systemowy w tekście (własny krój podaje host przez `--skrypt-font-family`), bezszeryfowy interfejs, kolumna ok. 68 znaków, interlinia 1,65, odstępy będące wielokrotnością linii (rytm pionowy), wyrównanie do lewej z dzieleniem wyrazów (`hyphens: auto`, `lang="pl"` ustawiany domyślnie na czytniku).
+- **Kolory:** motyw „Papier” (ciepła biel `#fbfaf6`, tekst `#2c2c2c`), „Ciemny” (ciemna szarość, bez czystej bieli), „OLED” (czerń) i „Wysoki kontrast” (np. na projektor). Przełącznik w panelu bocznym, zdarzenie `skrypt-theme-change`. Wartości można nadpisać zmiennymi `--skrypt-*`.
+- **Układ:** otwarcie rozdziału („ROZDZIAŁ 2”, tytuł, krótka linia), ozdobnik `* * *` dla granicy `***`.
+- **Świadomie pominięte:** szum na tle (obniża kontrast pod tekstem), przygaszanie do 40% przezroczystości (nieczytelne), automatyczne przygaszanie po bezczynności (nieprzewidywalne), justowanie tekstu.
+- **Na później:** oś postępu rozdziału na marginesie, przypisy na marginesie (potrzebują szerokości ok. 1500 px i parsera przypisów), nagłówek bieżący, numerowane rysunki i wzory, zakreślenia, druk.
+
 ### 2.1 Tryb czytania po sekcjach
 
 Cel: przechodzić strzałką od jednej części skryptu do następnej, tak jak przewraca się kartkę w czytniku, ale bez zamieniania tekstu w slajdy.

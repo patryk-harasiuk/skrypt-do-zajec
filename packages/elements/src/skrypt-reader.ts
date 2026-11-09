@@ -28,7 +28,7 @@ import type { SectionStepDetail } from './skrypt-section-bar.ts';
 import type { TocSelectDetail } from './skrypt-toc.ts';
 import { strings } from './strings.pl.ts';
 import { ReaderStoreController } from './store-controller.ts';
-import { focusRing, themeVariables } from './styles.ts';
+import { focusRing, themeVariables, themes } from './styles.ts';
 
 /**
  * Tryb czytania:
@@ -38,6 +38,11 @@ import { focusRing, themeVariables } from './styles.ts';
  *   Strzałki ← → działają tak samo.
  */
 export type ReaderMode = 'sections' | 'continuous';
+
+/** Wbudowane motywy wyglądu. */
+export type ReaderTheme = 'paper' | 'dark' | 'oled' | 'contrast';
+
+const THEMES: readonly ReaderTheme[] = ['paper', 'dark', 'oled', 'contrast'];
 
 export interface NavigateEventDetail {
   chapterId: string | null;
@@ -56,7 +61,8 @@ export interface NavigateEventDetail {
  * - `skrypt-ready` (detail: { document }),
  * - `skrypt-diagnostics` (detail: Diagnostic[]),
  * - `skrypt-navigate` (detail: { chapterId, sectionId, cause }),
- * - `skrypt-mode-change` (detail: { mode }), wysyłane tylko po zmianie przez użytkownika.
+ * - `skrypt-mode-change` (detail: { mode }), wysyłane tylko po zmianie przez użytkownika,
+ * - `skrypt-theme-change` (detail: { theme }), j.w.
  */
 export class SkryptReader extends LitElement {
   static override properties = {
@@ -64,7 +70,9 @@ export class SkryptReader extends LitElement {
     document: { attribute: false },
     mode: { type: String, reflect: true },
     keyboard: { type: String },
+    theme: { type: String, reflect: true },
     drawerOpen: { state: true },
+    hasFocus: { state: true },
     announcement: { state: true },
   };
 
@@ -72,6 +80,8 @@ export class SkryptReader extends LitElement {
   declare document: ScriptDocument | null;
   declare mode: ReaderMode;
   declare keyboard: KeyboardMode;
+  declare theme: ReaderTheme;
+  declare hasFocus: boolean;
   declare drawerOpen: boolean;
   declare announcement: string;
 
@@ -101,6 +111,16 @@ export class SkryptReader extends LitElement {
     },
   });
 
+  private readonly onFocusIn = (): void => {
+    this.hasFocus = true;
+  };
+
+  private readonly onFocusOut = (event: FocusEvent): void => {
+    // Fokus przechodzący do innego elementu wewnątrz czytnika nie kończy „bycia w czytniku”.
+    const next = event.relatedTarget as Node | null;
+    if (!next || !this.contains(next)) this.hasFocus = false;
+  };
+
   private readonly onKeydown = (event: Event): void => {
     const keyEvent = event as KeyboardEvent;
     if (keyEvent.key === 'Escape' && this.drawerOpen) {
@@ -124,19 +144,27 @@ export class SkryptReader extends LitElement {
     this.document = null;
     this.mode = 'sections';
     this.keyboard = 'focus';
+    this.theme = 'paper';
+    this.hasFocus = false;
     this.drawerOpen = false;
     this.announcement = '';
   }
 
   static override styles = [
     themeVariables,
+    themes,
     focusRing,
     css`
       :host {
         display: block;
         color: var(--_fg);
         background: var(--_bg);
-        font-family: var(--_font);
+        font-family: var(--_ui);
+      }
+      /* Host jest miejscem na fokus: kliknięcie gdziekolwiek w czytniku zostawia klawisze
+         strzałek aktywne. Ramka nie jest potrzebna, bo host nie jest przystankiem Tab. */
+      :host(:focus) {
+        outline: none;
       }
       .layout {
         display: grid;
@@ -177,6 +205,24 @@ export class SkryptReader extends LitElement {
         border-radius: 8px;
         padding: 0.5rem 0.7rem;
         cursor: pointer;
+      }
+      .theme-field {
+        display: block;
+        margin-top: 0.75rem;
+        font-size: 0.78rem;
+        color: var(--_muted);
+      }
+      .theme-field select {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font: inherit;
+        font-size: 0.9rem;
+        color: var(--_fg);
+        background: var(--_surface);
+        border: 1px solid var(--_border);
+        border-radius: 8px;
+        padding: 0.4rem 0.5rem;
       }
       .mode-toggle[aria-pressed='true'] {
         border-color: var(--_accent);
@@ -239,8 +285,11 @@ export class SkryptReader extends LitElement {
       }
       .doc-title {
         margin: 0 0 1.25rem;
-        font-size: 2.4rem;
-        line-height: 1.2;
+        font-family: var(--_font);
+        font-size: 2.5rem;
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+        text-wrap: balance;
       }
       .cover-toc-title {
         margin: 0 0 0.5rem;
@@ -361,12 +410,21 @@ export class SkryptReader extends LitElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // Skrypty i interfejs są po polsku; `lang` włącza polskie dzielenie wyrazów.
+    // Host może to zmienić własnym atrybutem lang.
+    if (!this.hasAttribute('lang')) this.setAttribute('lang', 'pl');
+    // Host przyjmuje fokus po kliknięciu w dowolne miejsce czytnika (nie jest przystankiem Tab).
+    if (!this.hasAttribute('tabindex')) this.tabIndex = -1;
+    this.addEventListener('focusin', this.onFocusIn);
+    this.addEventListener('focusout', this.onFocusOut);
     this.tracker.connect();
     this.bindKeyboard();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.removeEventListener('focusin', this.onFocusIn);
+    this.removeEventListener('focusout', this.onFocusOut);
     this.tracker.disconnect();
     this.unbindKeyboard();
   }
@@ -429,7 +487,7 @@ export class SkryptReader extends LitElement {
 
   /** Ustawia fokus na obszarze czytania, żeby działały skróty klawiszowe (`keyboard="focus"`). */
   focusReader(): void {
-    this.renderRoot.querySelector<HTMLElement>('main')?.focus({ preventScroll: true });
+    this.focus({ preventScroll: true });
   }
 
   // --- nawigacja -----------------------------------------------------------------------
@@ -458,12 +516,17 @@ export class SkryptReader extends LitElement {
     if (element) {
       const { top, bottom } = this.region();
       const rect = element.getBoundingClientRect();
+      // Początkiem pierwszej sekcji rozdziału jest początek rozdziału (jego tytuł), tak jak
+      // przy przejściu do niej. Inaczej ← wymagałaby dwóch naciśnięć: pierwsze cofałoby
+      // przewinięcie o wysokość tytułu, dopiero drugie przechodziłoby do poprzedniej sekcji.
+      const start = this.sectionStart(sectionId);
       const plan = planStep(
         {
           visibleTop: top,
           visibleBottom: bottom,
-          sectionTop: rect.top,
+          sectionTop: start?.top ?? rect.top,
           sectionBottom: rect.bottom,
+          ...(start ? { landing: start.landing } : {}),
         },
         direction,
       );
@@ -476,6 +539,22 @@ export class SkryptReader extends LitElement {
     if (direction === 1) return store.next();
     if (store.previous()) return true;
     return this.scrollToPageTop();
+  }
+
+  /** Początek sekcji i wysokość, na której ma lądować, gdy sekcja otwiera rozdział. */
+  private sectionStart(sectionId: string): { top: number; landing: number } | null {
+    const doc = this.loaded;
+    const chapterId = this.controller.state.chapterId;
+    const chapter = doc?.chapters.find((c) => c.id === chapterId);
+    if (!doc || chapter?.sections[0]?.id !== sectionId) return null;
+
+    const region = this.region();
+    if (doc.chapters[0]?.id === chapterId) {
+      const main = this.renderRoot.querySelector('main');
+      return main ? { top: main.getBoundingClientRect().top, landing: region.top } : null;
+    }
+    const element = this.chapterElement();
+    return element ? { top: element.getBoundingClientRect().top, landing: region.top + 16 } : null;
   }
 
   private stepChapter(direction: 1 | -1): boolean {
@@ -635,6 +714,19 @@ export class SkryptReader extends LitElement {
     this.step(event.detail.direction);
   }
 
+  private onThemeChange(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value as ReaderTheme;
+    if (!THEMES.includes(value)) return;
+    this.theme = value;
+    this.dispatchEvent(
+      new CustomEvent('skrypt-theme-change', {
+        detail: { theme: value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
   private toggleMode(): void {
     this.mode = this.mode === 'sections' ? 'continuous' : 'sections';
     this.dispatchEvent(
@@ -691,7 +783,35 @@ export class SkryptReader extends LitElement {
             >
               ${strings.modeSections}
             </button>
-            ${this.keyboard === 'none' ? nothing : html`<p class="hint">${strings.keyboardHint}</p>`}
+            ${
+              this.keyboard === 'none'
+                ? nothing
+                : html`<p class="hint">
+                    ${strings.keyboardHint}
+                    ${
+                      this.keyboard === 'focus' && !this.hasFocus
+                        ? html`<br /><strong>${strings.focusHint}</strong>`
+                        : nothing
+                    }
+                  </p>`
+            }
+            <label class="theme-field">
+              ${strings.theme}
+              <select @change=${this.onThemeChange}>
+                <option value="paper" ?selected=${this.theme === 'paper'}>
+                  ${strings.themePaper}
+                </option>
+                <option value="dark" ?selected=${this.theme === 'dark'}>
+                  ${strings.themeDark}
+                </option>
+                <option value="oled" ?selected=${this.theme === 'oled'}>
+                  ${strings.themeOled}
+                </option>
+                <option value="contrast" ?selected=${this.theme === 'contrast'}>
+                  ${strings.themeContrast}
+                </option>
+              </select>
+            </label>
           </div>
           <p class="sidebar-title">${strings.toc}</p>
           ${toc}

@@ -50,7 +50,7 @@ export class SkryptSectionBar extends LitElement {
     css`
       :host {
         display: block;
-        font-family: var(--_font);
+        font-family: var(--_ui);
         color: var(--_fg);
         background: var(--_bg);
         border-top: 1px solid var(--_border);

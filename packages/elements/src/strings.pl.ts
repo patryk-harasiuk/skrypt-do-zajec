@@ -22,4 +22,11 @@ export const strings = {
   chapterOf: (n: number, total: number) => `Rozdział ${n} z ${total}`,
   announceSection: (title: string) => `Sekcja: ${title}`,
   progress: 'Postęp w skrypcie',
+  chapterLabel: (n: string) => `Rozdział ${n}`,
+  theme: 'Motyw',
+  themePaper: 'Papier',
+  themeDark: 'Ciemny',
+  themeOled: 'OLED (czerń)',
+  themeContrast: 'Wysoki kontrast',
+  focusHint: 'Kliknij w tekst, aby włączyć klawisze strzałek.',
 } as const;

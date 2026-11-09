@@ -34,7 +34,7 @@ export class SkryptToc extends LitElement {
     css`
       :host {
         display: block;
-        font-family: var(--_font);
+        font-family: var(--_ui);
         color: var(--_fg);
       }
       ol {

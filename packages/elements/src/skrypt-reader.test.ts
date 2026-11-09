@@ -80,7 +80,7 @@ describe('<skrypt-reader>', () => {
     target.click();
     await reader.updateComplete;
 
-    expect(chapterTitle(reader)).toBe('2 Pętle');
+    expect(chapterTitle(reader)).toBe('Rozdział 2 Pętle');
     // Okładka znika poza pierwszym rozdziałem.
     expect(reader.shadowRoot!.querySelector('.cover')).toBeNull();
     const current = tocButtons(reader.shadowRoot!.querySelector('.sidebar skrypt-toc')!).filter(
@@ -96,7 +96,7 @@ describe('<skrypt-reader>', () => {
     const next = reader.shadowRoot!.querySelector<HTMLButtonElement>('.chapter-nav .next')!;
     next.click();
     await reader.updateComplete;
-    expect(chapterTitle(reader)).toBe('1 Zmienne i typy');
+    expect(chapterTitle(reader)).toBe('Rozdział 1 Zmienne i typy');
 
     reader.shadowRoot!.querySelector<HTMLButtonElement>('.chapter-nav button:not(.next)')!.click();
     await reader.updateComplete;
@@ -111,7 +111,7 @@ describe('<skrypt-reader>', () => {
       .shadowRoot!.querySelector('skrypt-block-markdown')!;
     block.shadowRoot!.querySelector('a')!.click();
     await reader.updateComplete;
-    expect(chapterTitle(reader)).toBe('2 B');
+    expect(chapterTitle(reader)).toBe('Rozdział 2 B');
   });
 
   it('wysyła skrypt-ready oraz skrypt-diagnostics', async () => {
@@ -136,7 +136,7 @@ describe('<skrypt-reader>', () => {
 
     reader.markdown = fixture('python-podstawy.md') + '\nDopisek.\n';
     await reader.updateComplete;
-    expect(chapterTitle(reader)).toBe('2 Pętle');
+    expect(chapterTitle(reader)).toBe('Rozdział 2 Pętle');
   });
 
   it('nie wykonuje skryptów z treści (xss.md)', async () => {
@@ -196,7 +196,7 @@ describe('<skrypt-reader> nawigacja po sekcjach', () => {
     await reader.updateComplete;
 
     expect(event.defaultPrevented).toBe(true);
-    expect(chapterTitle(reader)).toBe('1 Zmienne i typy');
+    expect(chapterTitle(reader)).toBe('Rozdział 1 Zmienne i typy');
     expect(activeSection(reader)).toBe('zmienne');
   });
 
@@ -205,7 +205,7 @@ describe('<skrypt-reader> nawigacja po sekcjach', () => {
     key(reader, 'ArrowRight', { shiftKey: true });
     key(reader, 'ArrowRight', { shiftKey: true });
     await reader.updateComplete;
-    expect(chapterTitle(reader)).toBe('2 Pętle');
+    expect(chapterTitle(reader)).toBe('Rozdział 2 Pętle');
     expect(activeSection(reader)).toBe('pętla-for');
   });
 
@@ -299,7 +299,7 @@ describe('<skrypt-reader> nawigacja po sekcjach', () => {
     expect(reader.mode).toBe('continuous');
     expect(changed).toHaveBeenCalledTimes(1);
     expect(reader.shadowRoot!.querySelector('skrypt-section-bar')).toBeNull();
-    expect(chapterTitle(reader)).toBe('1 Zmienne i typy');
+    expect(chapterTitle(reader)).toBe('Rozdział 1 Zmienne i typy');
 
     // Strzałki działają także w trybie ciągłym.
     key(reader, 'ArrowRight');

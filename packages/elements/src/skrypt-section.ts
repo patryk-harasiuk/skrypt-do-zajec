@@ -53,8 +53,17 @@ export class SkryptSection extends LitElement {
         padding-block: 1.25rem;
         scroll-margin-top: var(--skrypt-scroll-offset, 4.5rem);
       }
-      :host(:not(:first-of-type)) {
-        border-top: 1px dashed var(--_border);
+      /* Granica sekcji bez tytułu (***): ozdobnik jak w książce, nie linia. */
+      .ornament {
+        margin: 0 0 1.25rem;
+        text-align: center;
+        letter-spacing: 0.9em;
+        padding-left: 0.9em;
+        color: var(--_muted);
+        user-select: none;
+      }
+      :host(:first-of-type) .ornament {
+        display: none;
       }
       /* Tryb po sekcjach: aktywna sekcja wysuwa się na pierwszy plan jako uniesiona karta
          (cień, tło, lekkie powiększenie), a pozostałe cofają się, bo są przygaszone.
@@ -69,17 +78,16 @@ export class SkryptSection extends LitElement {
         margin-right: calc(-1 * var(--_bleed));
         padding-inline: var(--_bleed);
         border-left: 3px solid transparent;
-        border-top-color: transparent;
         border-radius: 12px;
         transform-origin: 50% 0;
       }
       :host([mode='sections'][active]) {
         z-index: 1;
         border-left-color: var(--_accent);
-        background: var(--_bg);
+        background: var(--_active-bg);
         box-shadow:
-          0 1px 3px rgb(0 0 0 / 0.08),
-          0 10px 28px rgb(0 0 0 / 0.12);
+          0 1px 3px color-mix(in srgb, var(--_shadow) 70%, transparent),
+          0 10px 28px var(--_shadow);
         transform: scale(var(--_active-scale));
       }
       :host([mode='sections']:not([active])) {
@@ -87,7 +95,7 @@ export class SkryptSection extends LitElement {
         cursor: pointer;
       }
       :host([mode='sections']:not([active]):hover) {
-        background: rgb(255 255 255 / 0.6);
+        background: color-mix(in srgb, var(--_active-bg) 55%, transparent);
       }
       @media (prefers-reduced-motion: no-preference) {
         :host([mode='sections']) {
@@ -115,7 +123,7 @@ export class SkryptSection extends LitElement {
       }
       .diagram-source {
         margin: 0;
-        font-family: var(--_font);
+        font-family: var(--_ui);
       }
       .diagram-source figcaption {
         font-size: 0.8rem;

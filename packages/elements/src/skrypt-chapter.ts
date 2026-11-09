@@ -40,20 +40,40 @@ export class SkryptChapter extends LitElement {
         display: block;
         scroll-margin-top: var(--skrypt-scroll-offset, 4.5rem);
       }
-      .title {
-        margin: 0 0 0.5rem;
-        font-family: var(--_font);
-        font-size: 1.9rem;
-        line-height: 1.25;
-        color: var(--_fg);
+      /* Otwarcie rozdziału: mały napis „Rozdział N”, tytuł i krótka linia. */
+      .opener {
+        margin: 1rem 0 1.5rem;
+        padding-bottom: 1.25rem;
+        position: relative;
       }
-      .number {
+      .opener::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 3rem;
+        border-top: 3px solid var(--_accent);
+      }
+      .title {
+        margin: 0;
+        font-family: var(--_font);
+        font-size: 2.1rem;
+        line-height: 1.2;
+        color: var(--_fg);
+        text-wrap: balance;
+      }
+      .kicker {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-family: var(--_ui);
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
         color: var(--_muted);
-        margin-right: 0.1em;
-        font-variant-numeric: tabular-nums;
       }
       .empty {
-        font-family: var(--_font);
+        font-family: var(--_ui);
         color: var(--_muted);
       }
     `,
@@ -81,9 +101,15 @@ export class SkryptChapter extends LitElement {
     if (!chapter) return nothing;
     const hasContent = chapter.sections.some((s) => s.blocks.length > 0 || s.title !== null);
     return html`
-      <h2 class="title">
-        ${this.number ? html`<span class="number">${this.number} </span>` : nothing}${chapter.title}
-      </h2>
+      <header class="opener">
+        <h2 class="title">
+          ${
+            this.number
+              ? html`<span class="kicker">${strings.chapterLabel(this.number)} </span>`
+              : nothing
+          }${chapter.title}
+        </h2>
+      </header>
       ${
         hasContent
           ? repeat(
