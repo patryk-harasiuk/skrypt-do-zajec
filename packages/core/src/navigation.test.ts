@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { activeTocEntry, createReaderStore, findSection, listSections } from './navigation.ts';
+import {
+  activeTocEntry,
+  createReaderStore,
+  findSection,
+  listSections,
+  sectionPosition,
+} from './navigation.ts';
 import { parseScript } from './parse.ts';
 
 const { document: doc } = parseScript(
@@ -74,6 +80,7 @@ describe('createReaderStore', () => {
     expect(createReaderStore(doc).getState()).toEqual({
       chapterId: 'wstęp',
       sectionId: 'wstęp-s1',
+      cause: 'init',
     });
     expect(createReaderStore(doc, 'b-s1').getState().chapterId).toBe('b');
     expect(createReaderStore(doc, 'nie-ma').getState().sectionId).toBe('wstęp-s1');
@@ -85,7 +92,11 @@ describe('createReaderStore', () => {
     const unsubscribe = store.subscribe(listener);
 
     expect(store.navigateTo('a2')).toBe(true);
-    expect(listener).toHaveBeenCalledWith({ chapterId: 'a', sectionId: 'a2' });
+    expect(listener).toHaveBeenCalledWith({
+      chapterId: 'a',
+      sectionId: 'a2',
+      cause: 'navigate',
+    });
 
     unsubscribe();
     store.navigateTo('b-s1');
@@ -129,11 +140,52 @@ describe('createReaderStore', () => {
     expect(store.previousChapter()).toBe(false);
   });
 
+  it('setActive zapisuje sekcję z przyczyną observe i nie powiadamia, gdy nic się nie zmienia', () => {
+    const store = createReaderStore(doc);
+    const listener = vi.fn();
+    store.subscribe(listener);
+
+    expect(store.setActive('a2')).toBe(true);
+    expect(listener).toHaveBeenCalledWith({ chapterId: 'a', sectionId: 'a2', cause: 'observe' });
+
+    expect(store.setActive('a2')).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(store.setActive('nie-ma')).toBe(false);
+  });
+
+  it('ruchy next/previous zawsze mają przyczynę navigate', () => {
+    const store = createReaderStore(doc);
+    store.next();
+    expect(store.getState().cause).toBe('navigate');
+    store.setActive('c-s1');
+    store.previous();
+    expect(store.getState().cause).toBe('navigate');
+  });
+
   it('obsługuje dokument bez rozdziałów', () => {
     const store = createReaderStore(parseScript('').document);
-    expect(store.getState()).toEqual({ chapterId: null, sectionId: null });
+    expect(store.getState()).toEqual({ chapterId: null, sectionId: null, cause: 'init' });
     expect(store.next()).toBe(false);
     expect(store.nextChapter()).toBe(false);
     expect(store.navigateTo('x')).toBe(false);
+  });
+});
+
+describe('sectionPosition', () => {
+  it('liczy pozycję w rozdziale i w całym dokumencie', () => {
+    expect(sectionPosition(doc, 'a2')).toEqual({
+      chapterNumber: 2,
+      chapterCount: 4,
+      sectionNumber: 3,
+      sectionCount: 4,
+      index: 3,
+      total: 7,
+    });
+    expect(sectionPosition(doc, 'c-s1')).toMatchObject({ chapterNumber: 4, index: 6 });
+  });
+
+  it('zwraca null dla nieznanej sekcji', () => {
+    expect(sectionPosition(doc, 'x')).toBeNull();
+    expect(sectionPosition(doc, null)).toBeNull();
   });
 });

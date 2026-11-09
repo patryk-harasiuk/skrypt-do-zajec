@@ -2,6 +2,7 @@ import { SkryptBlockMarkdown } from './skrypt-block-markdown.ts';
 import { SkryptChapter } from './skrypt-chapter.ts';
 import { SkryptReader } from './skrypt-reader.ts';
 import { SkryptSection } from './skrypt-section.ts';
+import { SkryptSectionBar } from './skrypt-section-bar.ts';
 import { SkryptToc } from './skrypt-toc.ts';
 
 const elements = {
@@ -9,6 +10,7 @@ const elements = {
   'skrypt-chapter': SkryptChapter,
   'skrypt-reader': SkryptReader,
   'skrypt-section': SkryptSection,
+  'skrypt-section-bar': SkryptSectionBar,
   'skrypt-toc': SkryptToc,
 } as const;
 
@@ -25,6 +27,7 @@ declare global {
     'skrypt-chapter': SkryptChapter;
     'skrypt-reader': SkryptReader;
     'skrypt-section': SkryptSection;
+    'skrypt-section-bar': SkryptSectionBar;
     'skrypt-toc': SkryptToc;
   }
 }

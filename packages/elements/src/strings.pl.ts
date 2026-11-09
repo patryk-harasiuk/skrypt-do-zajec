@@ -11,4 +11,15 @@ export const strings = {
   previousChapter: 'Poprzedni rozdział',
   nextChapter: 'Następny rozdział',
   diagram: 'Diagram (Mermaid)',
+  readingArea: 'Obszar czytania',
+  modeSections: 'Czytanie po sekcjach',
+  keyboardHint:
+    'Klawisze strzałek w lewo i w prawo przechodzą między sekcjami. Z klawiszem Shift: między rozdziałami.',
+  sectionBar: 'Nawigacja po sekcjach',
+  previousSection: 'Poprzednia sekcja',
+  nextSection: 'Następna sekcja',
+  sectionOf: (n: number, total: number) => `Sekcja ${n} z ${total}`,
+  chapterOf: (n: number, total: number) => `Rozdział ${n} z ${total}`,
+  announceSection: (title: string) => `Sekcja: ${title}`,
+  progress: 'Postęp w skrypcie',
 } as const;

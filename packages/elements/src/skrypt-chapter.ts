@@ -12,12 +12,16 @@ export class SkryptChapter extends LitElement {
     number: { type: String },
     sectionNumbers: { attribute: false },
     linkDefinitions: { attribute: false },
+    activeSectionId: { attribute: false },
+    mode: { type: String },
   };
 
   declare chapter: Chapter | null;
   declare number: string | null;
   declare sectionNumbers: ReadonlyMap<string, string | null>;
   declare linkDefinitions: string;
+  declare activeSectionId: string | null;
+  declare mode: 'sections' | 'continuous';
 
   constructor() {
     super();
@@ -25,6 +29,8 @@ export class SkryptChapter extends LitElement {
     this.number = null;
     this.sectionNumbers = new Map();
     this.linkDefinitions = '';
+    this.activeSectionId = null;
+    this.mode = 'continuous';
   }
 
   static override styles = [
@@ -53,10 +59,14 @@ export class SkryptChapter extends LitElement {
     `,
   ];
 
+  /** Elementy sekcji rozdziału w kolejności czytania. */
+  sectionElements(): SkryptSection[] {
+    return [...this.renderRoot.querySelectorAll<SkryptSection>('skrypt-section')];
+  }
+
   /** Element sekcji o danym id, jeśli należy do tego rozdziału. */
   sectionElement(sectionId: string): SkryptSection | null {
-    const sections = this.renderRoot.querySelectorAll<SkryptSection>('skrypt-section');
-    return [...sections].find((el) => el.dataset['sectionId'] === sectionId) ?? null;
+    return this.sectionElements().find((el) => el.dataset['sectionId'] === sectionId) ?? null;
   }
 
   protected override async getUpdateComplete(): Promise<boolean> {
@@ -84,6 +94,8 @@ export class SkryptChapter extends LitElement {
                   .section=${section}
                   .number=${this.sectionNumbers.get(section.id) ?? null}
                   .linkDefinitions=${this.linkDefinitions}
+                  .mode=${this.mode}
+                  .active=${section.id === this.activeSectionId}
                 ></skrypt-section>`,
             )
           : html`<p class="empty">${strings.emptyChapter}</p>`

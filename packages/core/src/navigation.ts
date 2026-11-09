@@ -51,10 +51,20 @@ export function activeTocEntry(
   return null;
 }
 
+/**
+ * Skąd wzięła się zmiana sekcji:
+ * - `init`: stan początkowy,
+ * - `navigate`: polecenie (strzałka, spis treści, link). UI powinno przewinąć do sekcji,
+ * - `observe`: czytelnik sam przewinął stronę albo kliknął sekcję. UI niczego nie przewija,
+ *   bo inaczej powstaje pętla przewinięcie → obserwacja → przewinięcie.
+ */
+export type NavigationCause = 'init' | 'navigate' | 'observe';
+
 export interface ReaderState {
   /** Null tylko dla dokumentu bez rozdziałów. */
   chapterId: string | null;
   sectionId: string | null;
+  cause: NavigationCause;
 }
 
 export type ReaderListener = (state: ReaderState) => void;
@@ -63,8 +73,13 @@ export interface ReaderStore {
   getState(): ReaderState;
   /** Zwraca funkcję kończącą subskrypcję. */
   subscribe(listener: ReaderListener): () => void;
-  /** Przejście do sekcji. Zwraca false, gdy sekcja nie istnieje. */
+  /** Przejście do sekcji (UI ma do niej przewinąć). Zwraca false, gdy sekcja nie istnieje. */
   navigateTo(sectionId: string): boolean;
+  /**
+   * Zapisuje, że czytelnik jest już w danej sekcji (przewinął stronę, kliknął sekcję).
+   * Nie wywołuje przewijania. Bez zmian, jeśli sekcja jest już aktywna.
+   */
+  setActive(sectionId: string): boolean;
   next(): boolean;
   previous(): boolean;
   nextChapter(): boolean;
@@ -79,15 +94,16 @@ export function createReaderStore(doc: ScriptDocument, initialSectionId?: string
   let state: ReaderState = {
     chapterId: initial?.chapterId ?? null,
     sectionId: initial?.sectionId ?? null,
+    cause: 'init',
   };
 
   const currentIndex = (): number => sections.findIndex((ref) => ref.sectionId === state.sectionId);
 
-  const goTo = (ref: SectionRef | undefined): boolean => {
+  const goTo = (ref: SectionRef | undefined, cause: NavigationCause = 'navigate'): boolean => {
     if (!ref) return false;
     // Powtórne przejście do tej samej sekcji też jest zdarzeniem (np. ponowne kliknięcie
     // w spis treści ma przewinąć widok), więc zawsze powiadamiamy subskrybentów.
-    state = { chapterId: ref.chapterId, sectionId: ref.sectionId };
+    state = { chapterId: ref.chapterId, sectionId: ref.sectionId, cause };
     for (const listener of [...listeners]) listener(state);
     return true;
   };
@@ -99,6 +115,12 @@ export function createReaderStore(doc: ScriptDocument, initialSectionId?: string
       return () => listeners.delete(listener);
     },
     navigateTo: (sectionId) => goTo(sections.find((ref) => ref.sectionId === sectionId)),
+    setActive(sectionId) {
+      const ref = sections.find((candidate) => candidate.sectionId === sectionId);
+      if (!ref) return false;
+      if (state.sectionId === sectionId) return true;
+      return goTo(ref, 'observe');
+    },
     next: () => goTo(sections[currentIndex() + 1]),
     previous: () => goTo(sections[currentIndex() - 1]),
     nextChapter() {
@@ -118,4 +140,39 @@ export function createReaderStore(doc: ScriptDocument, initialSectionId?: string
       return goTo(sections.find((ref) => ref.chapterId === previousChapterId));
     },
   };
+}
+
+export interface SectionPosition {
+  /** Numery od 1. */
+  chapterNumber: number;
+  chapterCount: number;
+  sectionNumber: number;
+  sectionCount: number;
+  /** Pozycja w całym dokumencie (od 0) i liczba wszystkich sekcji. */
+  index: number;
+  total: number;
+}
+
+/** Gdzie w dokumencie leży sekcja (do paska „sekcja 2 z 5”). Null dla nieznanej sekcji. */
+export function sectionPosition(
+  doc: ScriptDocument,
+  sectionId: string | null,
+): SectionPosition | null {
+  let index = 0;
+  const total = listSections(doc).length;
+  for (const [chapterIndex, chapter] of doc.chapters.entries()) {
+    const position = chapter.sections.findIndex((section) => section.id === sectionId);
+    if (position !== -1) {
+      return {
+        chapterNumber: chapterIndex + 1,
+        chapterCount: doc.chapters.length,
+        sectionNumber: position + 1,
+        sectionCount: chapter.sections.length,
+        index: index + position,
+        total,
+      };
+    }
+    index += chapter.sections.length;
+  }
+  return null;
 }

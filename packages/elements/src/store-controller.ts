@@ -1,7 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { ReaderState, ReaderStore } from '@skrypt/core';
 
-const EMPTY_STATE: ReaderState = { chapterId: null, sectionId: null };
+const EMPTY_STATE: ReaderState = { chapterId: null, sectionId: null, cause: 'init' };
 
 /**
  * Adapter między store z `core` (czysty TS) a cyklem życia Lit.
